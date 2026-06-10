@@ -4,6 +4,16 @@
 const MONTHS = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек']
 const NOW_MONTH = new Date().getMonth() // 0-based
 
+function escapeHtml(str) {
+  if (!str) return ''
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 function renderHeader() {
   const qColors = ['bg-slate-400','bg-slate-500','bg-slate-600','bg-slate-800']
   const qLabels = ['Q1','Q2','Q3','Q4']
@@ -67,8 +77,8 @@ function renderGanttBar(quarter, color) {
     const isEnd = i === cols.end
     const opacity = isInFuture(cols.end) ? 'opacity-40' : ''
     if (active) {
-      return `<div class="h-5 ${isStart ? 'rounded-l-sm' : ''} ${isEnd ? 'rounded-r-lg' : ''} ${opacity} relative" style="background:${color}">
-        ${isEnd ? `<span class="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] font-bold text-white">${getEndLabel(quarter)}</span>` : ''}
+      return `<div class="h-5 ${isStart ? 'rounded-l-sm' : ''} ${isEnd ? 'rounded-r-lg' : ''} ${opacity} relative" style="background:${escapeHtml(color)}">
+        ${isEnd ? `<span class="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] font-bold text-white">${escapeHtml(getEndLabel(quarter))}</span>` : ''}
       </div>`
     }
     return `<div class="h-5"></div>`
@@ -86,7 +96,7 @@ function renderTeamSummaryBar(team, color) {
 
   return Array.from({ length: 12 }, (_, i) => {
     const active = i >= start && i <= end
-    if (active) return `<div class="h-2.5 ${i===start?'rounded-l-sm':''} ${i===end?'rounded-r-sm':''}" style="background:${color}"></div>`
+    if (active) return `<div class="h-2.5 ${i===start?'rounded-l-sm':''} ${i===end?'rounded-r-sm':''}" style="background:${escapeHtml(color)}"></div>`
     return `<div class="h-2.5"></div>`
   }).join('')
 }
@@ -99,7 +109,7 @@ function renderTrackBar(track, color) {
   const end = Math.max(...cols.map(c => c.end))
   return Array.from({ length: 12 }, (_, i) => {
     const active = i >= start && i <= end
-    if (active) return `<div class="h-0.5 ${i===start?'rounded-l-full':''} ${i===end?'rounded-r-full':''}" style="background:${color}"></div>`
+    if (active) return `<div class="h-0.5 ${i===start?'rounded-l-full':''} ${i===end?'rounded-r-full':''}" style="background:${escapeHtml(color)}"></div>`
     return `<div class="h-0.5"></div>`
   }).join('')
 }
@@ -107,21 +117,21 @@ function renderTrackBar(track, color) {
 function renderObjectiveCard(obj, color) {
   const krHtml = (obj.key_results || []).map(kr => `
     <div class="flex items-start gap-2 py-1.5 border-t border-slate-100 text-[10px] text-slate-500">
-      <div class="w-1.5 h-1.5 rounded-full mt-1 shrink-0" style="background:${color}"></div>
+      <div class="w-1.5 h-1.5 rounded-full mt-1 shrink-0" style="background:${escapeHtml(color)}"></div>
       <div>
-        <span class="font-medium text-slate-700">${kr.title}</span>
-        ${kr.target ? `<span class="ml-1 text-slate-400">→ ${kr.target}</span>` : ''}
-        ${kr.description ? `<div class="text-slate-400 mt-0.5">${kr.description}</div>` : ''}
+        <span class="font-medium text-slate-700">${escapeHtml(kr.title)}</span>
+        ${kr.target ? `<span class="ml-1 text-slate-400">→ ${escapeHtml(kr.target)}</span>` : ''}
+        ${kr.description ? `<div class="text-slate-400 mt-0.5">${escapeHtml(kr.description)}</div>` : ''}
       </div>
     </div>`).join('')
 
   return `
     <div class="bg-white border border-slate-200 rounded-lg p-3.5 mt-1 mb-1.5 ml-7 shadow-sm text-sm">
-      <div class="font-semibold text-slate-900 mb-2">${obj.title}</div>
-      ${obj.description ? `<div class="text-[11px] text-slate-500 mb-2">${obj.description}</div>` : ''}
+      <div class="font-semibold text-slate-900 mb-2">${escapeHtml(obj.title)}</div>
+      ${obj.description ? `<div class="text-[11px] text-slate-500 mb-2">${escapeHtml(obj.description)}</div>` : ''}
       <div class="text-[10px] text-slate-400 flex flex-wrap gap-x-4 gap-y-1 mb-2">
-        ${obj.prerequisites ? `<span><strong class="text-slate-600">Требует:</strong> ${obj.prerequisites}</span>` : ''}
-        ${obj.dependencies ? `<span><strong class="text-slate-600">Зависит от:</strong> ${obj.dependencies}</span>` : ''}
+        ${obj.prerequisites ? `<span><strong class="text-slate-600">Требует:</strong> ${escapeHtml(obj.prerequisites)}</span>` : ''}
+        ${obj.dependencies ? `<span><strong class="text-slate-600">Зависит от:</strong> ${escapeHtml(obj.dependencies)}</span>` : ''}
       </div>
       ${krHtml ? `<div class="mt-2"><div class="text-[10px] font-semibold text-slate-700 mb-1">Key Results</div>${krHtml}</div>` : ''}
     </div>`
@@ -135,9 +145,9 @@ function renderKPI(kpis, color) {
       <div class="flex flex-wrap gap-2.5">
         ${kpis.map(kpi => `
           <div class="flex-1 min-w-[180px] border border-slate-100 rounded-lg p-3">
-            <div class="text-[11px] font-semibold text-slate-800 mb-1">${kpi.name}</div>
-            <div class="text-[10px] text-slate-400 mb-2">${kpi.description || ''}</div>
-            <div class="text-lg font-bold" style="color:${color}">${kpi.target}</div>
+            <div class="text-[11px] font-semibold text-slate-800 mb-1">${escapeHtml(kpi.name)}</div>
+            <div class="text-[10px] text-slate-400 mb-2">${escapeHtml(kpi.description || '')}</div>
+            <div class="text-lg font-bold" style="color:${escapeHtml(color)}">${escapeHtml(kpi.target)}</div>
           </div>`).join('')}
       </div>
     </div>`
@@ -161,21 +171,21 @@ function renderTeamIsland(team, { expanded = false, showKR = false } = {}) {
 
   const goalsHtml = (team.tracks || []).map(t => `
     <div class="flex items-start gap-1.5 text-[10px] text-slate-500 leading-snug">
-      <div class="w-1.5 h-1.5 rounded-full mt-1 shrink-0" style="background:${color}"></div>
-      <span class="italic">${t.goal || t.name}</span>
+      <div class="w-1.5 h-1.5 rounded-full mt-1 shrink-0" style="background:${escapeHtml(color)}"></div>
+      <span class="italic">${escapeHtml(t.goal || t.name)}</span>
     </div>`).join('')
 
   const summaryBar = renderTeamSummaryBar(team, color)
 
   const headerHtml = `
-    <div class="grid grid-cols-[240px_1fr] cursor-pointer" data-action="toggle-team" data-slug="${team.slug}">
+    <div class="grid grid-cols-[240px_1fr] cursor-pointer" data-action="toggle-team" data-slug="${escapeHtml(team.slug)}">
       <div class="flex items-center gap-2.5 px-3.5 py-2.5 bg-white border border-slate-200 ${expanded ? 'border-b-slate-100 rounded-tl-lg' : 'rounded-l-lg'} border-r-0">
-        <div class="w-7 h-7 rounded-md flex items-center justify-center text-white text-[10px] font-bold shrink-0" style="background:${color}">
-          ${team.team.slice(0,2).toUpperCase()}
+        <div class="w-7 h-7 rounded-md flex items-center justify-center text-white text-[10px] font-bold shrink-0" style="background:${escapeHtml(color)}">
+          ${escapeHtml(team.team.slice(0,2).toUpperCase())}
         </div>
         <div class="min-w-0">
-          <div class="text-xs font-semibold text-slate-900 leading-tight truncate">${team.team}</div>
-          <div class="text-[10px] text-slate-400 truncate">${team.owner || ''}</div>
+          <div class="text-xs font-semibold text-slate-900 leading-tight truncate">${escapeHtml(team.team)}</div>
+          <div class="text-[10px] text-slate-400 truncate">${escapeHtml(team.owner || '')}</div>
         </div>
         <svg class="ml-auto shrink-0 w-3.5 h-3.5 text-slate-300 transition-transform ${expanded ? 'rotate-90' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
       </div>
@@ -186,7 +196,7 @@ function renderTeamIsland(team, { expanded = false, showKR = false } = {}) {
 
   if (!expanded) {
     return `
-      <div class="team-island mb-2" data-slug="${team.slug}">
+      <div class="team-island mb-2" data-slug="${escapeHtml(team.slug)}">
         ${headerHtml}
         <div class="bg-white border border-slate-200 border-t-0 rounded-b-lg px-3.5 pb-3 pt-2 grid grid-cols-[240px_1fr]">
           <div class="flex flex-col gap-1.5">
@@ -210,7 +220,7 @@ function renderTeamIsland(team, { expanded = false, showKR = false } = {}) {
         <div class="grid grid-cols-[240px_1fr] items-center min-h-[20px]">
           <div class="flex items-center gap-1.5 pl-11 pr-3 py-0.5">
             <div class="w-1 h-1 rounded-full shrink-0" style="background:${color}"></div>
-            <div class="text-[10px] text-slate-400 leading-tight">${kr.title}</div>
+            <div class="text-[10px] text-slate-400 leading-tight">${escapeHtml(kr.title)}</div>
           </div>
           <div class="grid grid-cols-12 gap-1 px-1.5"></div>
         </div>`).join('') : ''
@@ -219,8 +229,8 @@ function renderTeamIsland(team, { expanded = false, showKR = false } = {}) {
         <div class="objective-block" data-obj-id="${objId}">
           <div class="grid grid-cols-[240px_1fr] items-center min-h-[30px] hover:bg-slate-50 cursor-pointer" data-action="toggle-obj" data-obj-id="${objId}">
             <div class="pl-7 pr-3 py-1">
-              <div class="text-[11px] font-medium text-slate-700 leading-tight">${obj.title}</div>
-              ${obj.description ? `<div class="text-[9px] text-slate-400 mt-0.5 line-clamp-1">${obj.description}</div>` : ''}
+              <div class="text-[11px] font-medium text-slate-700 leading-tight">${escapeHtml(obj.title)}</div>
+              ${obj.description ? `<div class="text-[9px] text-slate-400 mt-0.5 line-clamp-1">${escapeHtml(obj.description)}</div>` : ''}
             </div>
             <div class="grid grid-cols-12 gap-1 px-1.5 items-center">
               ${bar}
@@ -235,8 +245,8 @@ function renderTeamIsland(team, { expanded = false, showKR = false } = {}) {
       <div class="track-block">
         <div class="grid grid-cols-[240px_1fr] items-start bg-slate-50 border-t border-slate-100">
           <div class="px-3.5 py-2">
-            <span class="text-[9px] font-bold uppercase tracking-wide text-slate-400 block mb-0.5">Трек · ${track.name}</span>
-            <span class="text-[10px] text-slate-500 italic leading-snug">${track.goal || ''}</span>
+            <span class="text-[9px] font-bold uppercase tracking-wide text-slate-400 block mb-0.5">Трек · ${escapeHtml(track.name)}</span>
+            <span class="text-[10px] text-slate-500 italic leading-snug">${escapeHtml(track.goal || '')}</span>
           </div>
           <div class="grid grid-cols-12 gap-1 px-1.5 items-center py-3">
             ${trackBar}
@@ -251,7 +261,7 @@ function renderTeamIsland(team, { expanded = false, showKR = false } = {}) {
   const kpiHtml = renderKPI(team.kpis, color)
 
   return `
-    <div class="team-island mb-4" data-slug="${team.slug}">
+    <div class="team-island mb-4" data-slug="${escapeHtml(team.slug)}">
       ${headerHtml}
       <div class="border border-slate-200 border-t-0 rounded-b-lg overflow-hidden">
         ${tracksHtml}
