@@ -47,14 +47,14 @@ function renderTopbar(teams) {
   return `
     <div class="flex items-baseline gap-4 mb-6">
       <div class="text-base font-bold text-slate-900 tracking-tight">Дизайн-планы · Финам</div>
-      <div class="text-xs text-slate-400">${teams.length} ${plural(teams.length,'команда','команды','команд')} · ${years.join(', ')}</div>
+      <div class="text-xs text-slate-400">${teams.length} ${plural(teams.length,'команда','команды','команд')} · ${years.map(escapeHtml).join(', ')}</div>
     </div>`
 }
 
 function renderControls(teams) {
   const options = [
     `<option value="all">Все команды</option>`,
-    ...teams.map(t => `<option value="${t.slug}" ${state.selectedTeam===t.slug?'selected':''}>${escapeHtml(t.team)}</option>`)
+    ...teams.map(t => `<option value="${escapeHtml(t.slug)}" ${state.selectedTeam===t.slug?'selected':''}>${escapeHtml(t.team)}</option>`)
   ].join('')
 
   return `
@@ -74,6 +74,7 @@ function renderControls(teams) {
     </div>`
 }
 
+// Called after every full app.innerHTML replacement — relies on fresh DOM nodes having no prior listeners.
 function bindEvents() {
   document.getElementById('team-select')?.addEventListener('change', e => {
     state.selectedTeam = e.target.value
