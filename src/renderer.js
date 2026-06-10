@@ -219,7 +219,7 @@ function renderTeamIsland(team, { expanded = false, showKR = false } = {}) {
       const krRows = showKR ? (obj.key_results || []).map(kr => `
         <div class="grid grid-cols-[240px_1fr] items-center min-h-[20px]">
           <div class="flex items-center gap-1.5 pl-11 pr-3 py-0.5">
-            <div class="w-1 h-1 rounded-full shrink-0" style="background:${color}"></div>
+            <div class="w-1 h-1 rounded-full shrink-0" style="background:${escapeHtml(color)}"></div>
             <div class="text-[10px] text-slate-400 leading-tight">${escapeHtml(kr.title)}</div>
           </div>
           <div class="grid grid-cols-12 gap-1 px-1.5"></div>
