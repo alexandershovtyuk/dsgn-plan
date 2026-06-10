@@ -82,8 +82,12 @@ function build() {
   // Tailwind
   execSync('npx tailwindcss -i src/styles.css -o dist/assets/styles.css --minify', { stdio: 'inherit' })
 
-  // Copy app.js (will be replaced by bundle in Task 7)
-  fs.copyFileSync('src/app.js', 'dist/assets/app.js')
+  // Bundle: concatenate src modules into a single browser script.
+  // Files share global scope — no import/export in any of them.
+  const bundle = ['src/auth.js', 'src/renderer.js', 'src/app.js']
+    .map(f => fs.readFileSync(f, 'utf8'))
+    .join('\n')
+  fs.writeFileSync('dist/assets/app.js', bundle)
 
   // Embed DATA + auth hash
   const data = { teams: teams.map(t => ({ year: t.year, slug: t.slug, ...t.data })) }
