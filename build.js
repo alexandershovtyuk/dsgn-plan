@@ -60,6 +60,9 @@ function quarterToColumns(quarter) {
 
 // ─── Password hash ─────────────────────────────────────────
 
+// Client-side password check — a lightweight barrier, not cryptographic security.
+// The hash is intentionally served in HTML; the goal is to deter casual access,
+// not prevent a determined attacker with DevTools.
 function getPasswordHash() {
   const pwd = process.env.SITE_PASSWORD
   if (!pwd) return null
@@ -115,8 +118,13 @@ if (require.main === module) {
   if (process.argv.includes('--watch')) {
     const http = require('http')
     build()
+    const DIST_DIR = path.resolve('dist')
     http.createServer((req, res) => {
-      let fp = path.join('dist', req.url === '/' ? 'index.html' : req.url)
+      const safePath = req.url === '/' ? 'index.html' : req.url.replace(/^\//, '')
+      const fp = path.resolve(DIST_DIR, safePath)
+      if (!fp.startsWith(DIST_DIR + path.sep) && fp !== DIST_DIR) {
+        res.writeHead(403); res.end(); return
+      }
       if (!fs.existsSync(fp)) { res.writeHead(404); res.end(); return }
       const ext = path.extname(fp)
       const mime = { '.html':'text/html', '.css':'text/css', '.js':'application/javascript' }
@@ -124,7 +132,10 @@ if (require.main === module) {
       res.end(fs.readFileSync(fp))
     }).listen(3000, () => console.log('Dev server: http://localhost:3000'))
     fs.watch('data', { recursive: true }, (_, f) => {
-      if (f?.endsWith('.yaml')) { console.log(`Changed: ${f}`); build() }
+      if (f?.endsWith('.yaml')) {
+        console.log(`Changed: ${f}`)
+        try { build() } catch (e) { console.error('Build error:', e.message) }
+      }
     })
   } else {
     build()
