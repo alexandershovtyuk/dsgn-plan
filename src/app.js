@@ -3,7 +3,6 @@
 
 const state = {
   selectedTeam: 'all',
-  showKR: false,
   expandedTeams: new Set(),
 }
 
@@ -33,7 +32,6 @@ function renderApp() {
       <div id="teams-container">
         ${filtered.map(t => renderTeamIsland(t, {
           expanded: state.expandedTeams.has(t.slug),
-          showKR: state.showKR,
         })).join('')}
       </div>
     </div>`
@@ -72,14 +70,6 @@ function renderTopbar(teams) {
         <div class="flex items-center gap-0.5 bg-slate-200/60 rounded-xl p-1">
           ${allChip}${teamChips}
         </div>
-        <label class="flex items-center gap-2 text-xs text-slate-500 cursor-pointer ml-6 select-none">
-          <span class="relative inline-block w-7 h-4">
-            <input type="checkbox" id="kr-toggle" ${state.showKR?'checked':''} class="sr-only peer">
-            <div class="w-7 h-4 bg-slate-200 rounded-full peer-checked:bg-slate-800 transition-colors"></div>
-            <div class="absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform peer-checked:translate-x-3"></div>
-          </span>
-          Key Results
-        </label>
       </div>
     </div>`
 }
@@ -93,11 +83,6 @@ function bindEvents() {
       state.selectedTeam = el.dataset.slug
       renderApp()
     })
-  })
-
-  document.getElementById('kr-toggle')?.addEventListener('change', e => {
-    state.showKR = e.target.checked
-    renderApp()
   })
 
   document.querySelectorAll('[data-action="toggle-team"]').forEach(el => {

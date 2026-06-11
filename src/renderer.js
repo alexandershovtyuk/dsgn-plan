@@ -242,7 +242,8 @@ function renderTeamBoardHeader() {
                     underline decoration-dashed decoration-slate-300 underline-offset-4 hover:text-slate-600">
           ${escapeHtml(m.label)}
           <span class="absolute invisible opacity-0 group-hover:visible group-hover:opacity-100
-                       bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-none whitespace-nowrap
+                       bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-none
+                       max-w-[14rem] text-center leading-snug
                        bg-slate-900 text-white text-[11px] px-2.5 py-1.5 rounded-xl z-10 transition-opacity">
             ${escapeHtml(m.tip)}
           </span>
@@ -315,7 +316,7 @@ function renderCollapsedTeamCard(team) {
     </div>`
 }
 
-function renderTeamIsland(team, { expanded = false, showKR = false } = {}) {
+function renderTeamIsland(team, { expanded = false } = {}) {
   if (!expanded) return renderCollapsedTeamCard(team)
 
   const color = team.display?.color || '#6366f1'

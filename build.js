@@ -102,7 +102,7 @@ function build() {
 <title>Дизайн-планы · Финам</title>
 <link rel="stylesheet" href="assets/styles.css">
 </head>
-<body class="bg-slate-100 text-slate-900 min-w-[1024px]">
+<body class="bg-slate-100 text-slate-900 min-w-[1024px] overflow-x-hidden">
 <div id="app"></div>
 <script>
 ${authScript}
