@@ -145,17 +145,18 @@ function renderTrackBar(track, color) {
   }).join('')
 }
 
+const MONTHS_ABBR = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек']
+
 function renderObjMiniGantt(quarter, lch, isFuture) {
   const cols = quarterToColumns(quarter)
   if (!cols) return ''
-  const activeColor = isFuture ? ok(lch, 0.78, 0.50) : ok(lch, 0.58, 0.85)
-  return `
-    <div class="flex gap-px shrink-0" style="width:84px">
-      ${Array.from({ length: 12 }, (_, i) => {
-        const active = i >= cols.start && i <= cols.end
-        return `<div style="flex:1;height:6px;border-radius:2px;background:${active ? activeColor : 'rgba(0,0,0,0.06)'}"></div>`
-      }).join('')}
-    </div>`
+  const bg    = isFuture ? ok(lch, 0.970, 0.22) : ok(lch, 0.58, 0.85)
+  const color = isFuture ? ok(lch, 0.45) : 'white'
+  const pills = []
+  for (let i = cols.start; i <= cols.end; i++) {
+    pills.push(`<span style="background:${bg};color:${color};padding:2px 6px;border-radius:6px;font-size:10px;font-weight:600;white-space:nowrap">${MONTHS_ABBR[i]}</span>`)
+  }
+  return `<div class="flex gap-1 shrink-0">${pills.join('')}</div>`
 }
 
 function renderObjectiveCard(obj, color) {
@@ -263,11 +264,16 @@ function renderTeamBoardHeader() {
     </div>`
 }
 
-function buildTeamHeaderRow(team, color) {
+function buildTeamHeaderRow(team, color, { expanded = false } = {}) {
   const currentQ = Math.floor(NOW_MONTH / 3)
   const lch = hexToOklch(color)
 
-  const qBlocks = [0,1,2,3].map(qi => {
+  const qBlocks = expanded
+    ? [1,2,3,4].map(q => `
+        <div style="padding:5px 0;text-align:center;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:0.05em;color:${ok(lch, 0.72, 0.40)}">Q${q}</div>
+        </div>`).join('')
+    : [0,1,2,3].map(qi => {
     const qStart = qi * 3, qEnd = qi * 3 + 2
     const count = (team.tracks || [])
       .flatMap(t => t.objectives || [])
@@ -381,7 +387,7 @@ function renderTeamIsland(team, { expanded = false } = {}) {
          data-slug="${escapeHtml(team.slug)}">
       <div class="cursor-pointer hover:bg-slate-50 transition-colors duration-150"
            data-action="toggle-team" data-slug="${escapeHtml(team.slug)}">
-        ${buildTeamHeaderRow(team, color)}
+        ${buildTeamHeaderRow(team, color, { expanded: true })}
       </div>
       <div class="border-t border-slate-100">
         ${tracksHtml}
