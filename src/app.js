@@ -27,10 +27,10 @@ function renderApp() {
 
   const app = document.getElementById('app')
   app.innerHTML = `
-    <div class="max-w-[1920px] min-w-[1024px] mx-auto px-12 py-8">
+    <div class="max-w-[1920px] min-w-[1024px] mx-auto px-10 py-10">
       ${renderTopbar(teams)}
       ${renderControls(teams)}
-      ${renderHeader()}
+      ${renderTeamBoardHeader()}
       <div id="teams-container">
         ${filtered.map(t => renderTeamIsland(t, {
           expanded: state.expandedTeams.has(t.slug),
