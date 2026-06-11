@@ -158,8 +158,7 @@ function renderObjectiveCard(obj, color) {
 
   return `
     <div class="bg-white border border-slate-200 rounded-lg p-4 mt-1 mb-2 ml-8 shadow-sm">
-      <div class="font-semibold text-slate-900 mb-2">${escapeHtml(obj.title)}</div>
-      ${krHtml ? `<div class="mt-3"><div class="text-xs font-semibold text-slate-700 mb-1">Key Results</div>${krHtml}</div>` : ''}
+      ${krHtml ? `<div><div class="text-xs font-semibold text-slate-700 mb-1">Key Results</div>${krHtml}</div>` : ''}
     </div>`
 }
 
@@ -349,7 +348,7 @@ function renderTeamIsland(team, { expanded = false } = {}) {
 
     return `
       <div class="track-block px-3 pb-3 first:pt-3">
-        <div class="rounded-xl p-3" style="background:${ok(lch, 0.988, 0.08)}">
+        <div class="rounded-xl p-3" style="background:${ok(lch, 0.955, 0.15)}">
           <div class="text-[9px] font-semibold uppercase tracking-widest mb-1 px-1"
                style="color:${ok(lch, lch.L + 0.20, 0.55)}">${escapeHtml(track.name)}</div>
           <div class="text-sm font-semibold leading-snug mb-2.5 px-1"
