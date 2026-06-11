@@ -64,7 +64,36 @@ function getEndLabel(quarter) {
   return parts[parts.length - 1].trim()
 }
 
+// Converts 6-digit hex color to OKLCH { L, C, H }
+function hexToOklch(hex) {
+  const r = parseInt(hex.slice(1,3), 16) / 255
+  const g = parseInt(hex.slice(3,5), 16) / 255
+  const b = parseInt(hex.slice(5,7), 16) / 255
+  const lin = c => c <= 0.04045 ? c/12.92 : ((c+0.055)/1.055) ** 2.4
+  const [rl, gl, bl] = [lin(r), lin(g), lin(b)]
+  const l = Math.cbrt(0.4122214708*rl + 0.5363325363*gl + 0.0514459929*bl)
+  const m = Math.cbrt(0.2119034982*rl + 0.6806995451*gl + 0.1073969566*bl)
+  const s = Math.cbrt(0.0883024619*rl + 0.2817188376*gl + 0.6299787005*bl)
+  const L =  0.2104542553*l + 0.7936177850*m - 0.0040720468*s
+  const a = +1.9779984951*l - 2.4285922050*m + 0.4505937099*s
+  const B = +0.0259040371*l + 0.7827717662*m - 0.8086757660*s
+  const C = Math.sqrt(a*a + B*B)
+  const H = Math.atan2(B, a) * 180 / Math.PI
+  return { L, C, H: H < 0 ? H+360 : H }
+}
+
+// Build oklch() CSS value. l = absolute lightness (0–1), c = C multiplier (0–1), alpha = optional
+function ok(lch, l, c = 1, alpha) {
+  const L = +(Math.max(0, Math.min(1, l !== undefined ? l : lch.L))).toFixed(3)
+  const C = +(lch.C * c).toFixed(4)
+  const H = +lch.H.toFixed(2)
+  return alpha !== undefined
+    ? `oklch(${L} ${C} ${H} / ${alpha})`
+    : `oklch(${L} ${C} ${H})`
+}
+
 function renderGanttBar(quarter, color) {
+  const lch = hexToOklch(color)
   const cols = quarterToColumns(quarter)
   if (!cols) {
     return `<div class="col-span-12 h-6 rounded bg-slate-200 flex items-center px-3">
@@ -77,7 +106,7 @@ function renderGanttBar(quarter, color) {
     const isEnd = i === cols.end
     const opacity = isInFuture(cols.end) ? 'opacity-40' : ''
     if (active) {
-      return `<div class="h-6 ${isStart ? 'rounded-l' : ''} ${isEnd ? 'rounded-r-lg' : ''} ${opacity} relative" style="background:${escapeHtml(color)}">
+      return `<div class="h-6 ${isStart ? 'rounded-l' : ''} ${isEnd ? 'rounded-r-lg' : ''} ${opacity} relative" style="background:${ok(lch)}">
         ${isEnd ? `<span class="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-white">${escapeHtml(getEndLabel(quarter))}</span>` : ''}
       </div>`
     }
@@ -86,6 +115,7 @@ function renderGanttBar(quarter, color) {
 }
 
 function renderTeamSummaryBar(team, color) {
+  const lch = hexToOklch(color)
   const allQuarters = (team.tracks || [])
     .flatMap(t => (t.objectives || []).map(o => o.quarter).filter(Boolean))
   if (allQuarters.length === 0) return Array(12).fill(`<div class="h-3"></div>`).join('')
@@ -96,12 +126,13 @@ function renderTeamSummaryBar(team, color) {
 
   return Array.from({ length: 12 }, (_, i) => {
     const active = i >= start && i <= end
-    if (active) return `<div class="h-3 ${i===start?'rounded-l':''} ${i===end?'rounded-r':''}" style="background:${escapeHtml(color)}"></div>`
+    if (active) return `<div class="h-3 ${i===start?'rounded-l':''} ${i===end?'rounded-r':''}" style="background:${ok(lch)}"></div>`
     return `<div class="h-3"></div>`
   }).join('')
 }
 
 function renderTrackBar(track, color) {
+  const lch = hexToOklch(color)
   const allQ = (track.objectives || []).map(o => o.quarter).filter(Boolean)
   if (allQ.length === 0) return Array(12).fill('<div class="h-0.5"></div>').join('')
   const cols = allQ.map(q => quarterToColumns(q)).filter(Boolean)
@@ -109,15 +140,16 @@ function renderTrackBar(track, color) {
   const end = Math.max(...cols.map(c => c.end))
   return Array.from({ length: 12 }, (_, i) => {
     const active = i >= start && i <= end
-    if (active) return `<div class="h-0.5 ${i===start?'rounded-l-full':''} ${i===end?'rounded-r-full':''}" style="background:${escapeHtml(color)}"></div>`
+    if (active) return `<div class="h-0.5 ${i===start?'rounded-l-full':''} ${i===end?'rounded-r-full':''}" style="background:${ok(lch)}"></div>`
     return `<div class="h-0.5"></div>`
   }).join('')
 }
 
 function renderObjectiveCard(obj, color) {
+  const lch = hexToOklch(color)
   const krHtml = (obj.key_results || []).map(kr => `
     <div class="flex items-start gap-2.5 py-2 border-t border-slate-100 text-xs text-slate-500">
-      <div class="w-1.5 h-1.5 rounded-full mt-1 shrink-0" style="background:${escapeHtml(color)}"></div>
+      <div class="w-1.5 h-1.5 rounded-full mt-1 shrink-0" style="background:${ok(lch)}"></div>
       <div>
         <span class="font-medium text-slate-700">${escapeHtml(kr.title)}</span>
         ${kr.description ? `<div class="text-slate-400 mt-0.5">${escapeHtml(kr.description)}</div>` : ''}
@@ -133,6 +165,7 @@ function renderObjectiveCard(obj, color) {
 
 function renderKPI(kpis, color) {
   if (!kpis?.length) return ''
+  const lch = hexToOklch(color)
   return `
     <div class="border-t-2 border-slate-100 bg-slate-50 px-6 py-5">
       <div class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4">KPI</div>
@@ -141,7 +174,7 @@ function renderKPI(kpis, color) {
           <div class="flex-1 min-w-[200px] bg-white border border-slate-200 rounded-xl p-4">
             <div class="text-sm font-semibold text-slate-800 mb-1">${escapeHtml(kpi.name)}</div>
             <div class="text-xs text-slate-400 mb-3 leading-relaxed">${escapeHtml(kpi.description || '')}</div>
-            ${kpi.target ? `<div class="text-2xl font-bold" style="color:${escapeHtml(color)}">${escapeHtml(kpi.target)}</div>` : ''}
+            ${kpi.target ? `<div class="text-2xl font-bold" style="color:${ok(lch)}">${escapeHtml(kpi.target)}</div>` : ''}
           </div>`).join('')}
       </div>
     </div>`
@@ -157,13 +190,6 @@ function plural(n, one, few, many) {
 function slugify(str) {
   const map = { 'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya' }
   return str.toLowerCase().split('').map(c => map[c] ?? c).join('').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-}
-
-function hexToRgba(hex, alpha) {
-  const r = parseInt(hex.slice(1,3), 16)
-  const g = parseInt(hex.slice(3,5), 16)
-  const b = parseInt(hex.slice(5,7), 16)
-  return `rgba(${r},${g},${b},${alpha})`
 }
 
 const BOARD_GRID    = 'display:grid;grid-template-columns:1fr 64px 64px 64px 64px 24px 64px 64px 64px 64px;align-items:center;column-gap:4px;'
@@ -226,6 +252,7 @@ function renderTeamBoardHeader() {
 
 function buildTeamHeaderRow(team, color) {
   const currentQ = Math.floor(NOW_MONTH / 3)
+  const lch = hexToOklch(color)
 
   const qBlocks = [0,1,2,3].map(qi => {
     const qStart = qi * 3, qEnd = qi * 3 + 2
@@ -241,10 +268,10 @@ function buildTeamHeaderRow(team, color) {
         <div class="text-[9px]" style="color:#d1d5db;">целей</div>
       </div>`
     }
-    const textColor = isFuture ? hexToRgba(color, 0.45) : color
-    const subColor  = isFuture ? hexToRgba(color, 0.35) : hexToRgba(color, 0.7)
-    const bg        = hexToRgba(color, isFuture ? 0.06 : 0.1)
-    const border    = `1px solid ${hexToRgba(color, isFuture ? 0.25 : 0.4)}`
+    const textColor = isFuture ? ok(lch, lch.L + 0.20, 0.55) : ok(lch)
+    const subColor  = isFuture ? ok(lch, lch.L + 0.28, 0.40) : ok(lch, lch.L + 0.06, 0.75)
+    const bg        = isFuture ? ok(lch, 0.985, 0.10)        : ok(lch, 0.970, 0.22)
+    const border    = `1px solid ${isFuture ? ok(lch, 0.930, 0.28) : ok(lch, 0.875, 0.45)}`
     const word      = plural(count, 'цель', 'цели', 'целей')
     return `<div style="padding:5px 0;border-radius:10px;text-align:center;background:${bg};border:${border};">
       <div class="text-[10px] font-bold tracking-wide" style="color:${textColor};">Q${qi+1}</div>
@@ -262,7 +289,7 @@ function buildTeamHeaderRow(team, color) {
     <div style="${BOARD_GRID}padding:10px 0;overflow:hidden;">
       <div class="flex items-center gap-3 px-4 overflow-hidden">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0"
-             style="background:${escapeHtml(color)}">
+             style="background:${ok(lch)}">
           ${escapeHtml(team.team.slice(0,2).toUpperCase())}
         </div>
         <div class="min-w-0">
@@ -292,100 +319,44 @@ function renderTeamIsland(team, { expanded = false, showKR = false } = {}) {
   if (!expanded) return renderCollapsedTeamCard(team)
 
   const color = team.display?.color || '#6366f1'
+  const lch = hexToOklch(color)
   const currentQ = Math.floor(NOW_MONTH / 3)
 
-  // Sub-header: Q column labels + thin bars (uses EXP_BODY_GRID)
-  const qSubHeaderCells = [0,1,2,3].map(qi => {
-    const qStart = qi * 3, qEnd = qi * 3 + 2
-    const hasGoals = (team.tracks || []).flatMap(t => t.objectives || [])
-      .some(o => { const c = quarterToColumns(o.quarter); return c && c.start <= qEnd && c.end >= qStart })
-    if (!hasGoals) {
-      return `<div class="border-l border-slate-100 flex flex-col items-center justify-center gap-1.5 py-2 px-4">
-        <span class="text-[11px] font-bold tracking-wide" style="color:#d1d5db;">Q${qi+1}</span>
-        <div style="width:60%;height:4px;border-radius:2px;background:#e2e8f0;"></div>
-      </div>`
-    }
-    const isFuture = qi > currentQ
-    const labelColor = isFuture ? hexToRgba(color, 0.45) : color
-    const barColor   = isFuture ? hexToRgba(color, 0.25) : color
-    return `<div class="border-l border-slate-100 flex flex-col items-center justify-center gap-1.5 py-2 px-4">
-      <span class="text-[11px] font-bold tracking-wide" style="color:${labelColor};">Q${qi+1}</span>
-      <div style="width:60%;height:4px;border-radius:2px;background:${barColor};"></div>
-    </div>`
-  }).join('')
-
-  const subHeaderHtml = `
-    <div style="${EXP_BODY_GRID}border-bottom:1px solid #f1f5f9;">
-      <div></div>
-      ${qSubHeaderCells}
-    </div>`
-
   const tracksHtml = (team.tracks || []).map(track => {
-    const tRange = trackQuarterRange(track)
-
-    const trackQCells = [0,1,2,3].map(qi => {
-      if (!tRange || qi < tRange.start || qi > tRange.end) {
-        return `<div class="border-l border-slate-100 px-3 py-3"></div>`
-      }
-      const isFuture = qi > currentQ
-      const bg = isFuture ? hexToRgba(color, 0.3) : color
-      const isStart = qi === tRange.start, isEnd = qi === tRange.end
-      const r = isStart && isEnd ? '4px' : isStart ? '4px 0 0 4px' : isEnd ? '0 4px 4px 0' : '0'
-      return `<div class="border-l border-slate-100 px-3 py-3 flex items-center">
-        <div style="height:8px;width:100%;background:${bg};border-radius:${r};"></div>
-      </div>`
-    }).join('')
-
     const objectivesHtml = (track.objectives || []).map(obj => {
       const oRange = quarterRange(obj.quarter)
       const objId = slugify(obj.title)
-
-      const objQCells = [0,1,2,3].map(qi => {
-        if (!oRange || qi < oRange.start || qi > oRange.end) {
-          return `<div class="border-l border-slate-100 px-3 py-2"></div>`
-        }
-        const isFuture = qi > currentQ
-        const bg = isFuture ? hexToRgba(color, 0.25) : hexToRgba(color, 0.45)
-        const isStart = qi === oRange.start, isEnd = qi === oRange.end
-        const r = isStart && isEnd ? '3px' : isStart ? '3px 0 0 3px' : isEnd ? '0 3px 3px 0' : '0'
-        return `<div class="border-l border-slate-100 px-3 py-2 flex items-center">
-          <div style="height:6px;width:100%;background:${bg};border-radius:${r};"></div>
-        </div>`
-      }).join('')
-
-      const krRows = showKR ? (obj.key_results || []).map(kr => `
-        <div style="${EXP_BODY_GRID}min-height:28px;" class="border-t border-slate-100 items-center">
-          <div class="flex items-center gap-2 pl-10 pr-4 py-1">
-            <div class="w-1 h-1 rounded-full shrink-0" style="background:${escapeHtml(color)}"></div>
-            <div class="text-xs text-slate-400 leading-tight">${escapeHtml(kr.title)}</div>
-          </div>
-          ${[0,1,2,3].map(() => `<div class="border-l border-slate-100"></div>`).join('')}
-        </div>`).join('') : ''
+      const isFuture = oRange ? oRange.start > currentQ : false
+      const qPillBg    = isFuture ? ok(lch, 0.985, 0.12) : ok(lch, 0.970, 0.22)
+      const qPillColor = isFuture ? ok(lch, lch.L + 0.20, 0.55) : ok(lch)
+      const qPill = obj.quarter
+        ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0"
+                style="background:${qPillBg};color:${qPillColor}">${escapeHtml(obj.quarter)}</span>`
+        : ''
 
       return `
-        <div class="objective-block border-t border-slate-100" data-obj-id="${objId}">
-          <div style="${EXP_BODY_GRID}min-height:40px;cursor:pointer;"
-               class="hover:bg-slate-50 items-center" data-action="toggle-obj" data-obj-id="${objId}">
-            <div class="pl-8 pr-4 py-2">
-              <div class="text-xs font-medium text-slate-800 leading-snug">${escapeHtml(obj.title)}</div>
-            </div>
-            ${objQCells}
+        <div class="objective-block" data-obj-id="${objId}">
+          <div class="bg-white rounded-lg flex items-center gap-3 px-3 py-2.5 cursor-pointer
+                      hover:bg-slate-50 transition-colors duration-100"
+               data-action="toggle-obj" data-obj-id="${objId}">
+            <div class="text-sm font-medium text-slate-800 leading-snug flex-1">${escapeHtml(obj.title)}</div>
+            ${qPill}
           </div>
           <div class="obj-card hidden">${renderObjectiveCard(obj, color)}</div>
-          ${krRows}
         </div>`
     }).join('')
 
     return `
-      <div class="track-block border-t border-slate-200">
-        <div style="${EXP_BODY_GRID}" class="bg-slate-50 items-center">
-          <div class="px-4 py-3">
-            <div class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Трек · ${escapeHtml(track.name)}</div>
-            <div class="text-xs text-slate-500 italic leading-snug">${escapeHtml(track.goal || '')}</div>
+      <div class="track-block px-3 pb-3 first:pt-3">
+        <div class="rounded-xl p-3" style="background:${ok(lch, 0.988, 0.08)}">
+          <div class="text-[9px] font-semibold uppercase tracking-widest mb-1 px-1"
+               style="color:${ok(lch, lch.L + 0.20, 0.55)}">${escapeHtml(track.name)}</div>
+          <div class="text-sm font-semibold leading-snug mb-2.5 px-1"
+               style="color:${ok(lch)}">${escapeHtml(track.goal || '')}</div>
+          <div class="flex flex-col gap-1">
+            ${objectivesHtml}
           </div>
-          ${trackQCells}
         </div>
-        ${objectivesHtml}
       </div>`
   }).join('')
 
@@ -398,8 +369,9 @@ function renderTeamIsland(team, { expanded = false, showKR = false } = {}) {
            data-action="toggle-team" data-slug="${escapeHtml(team.slug)}">
         ${buildTeamHeaderRow(team, color)}
       </div>
-      ${subHeaderHtml}
-      ${tracksHtml}
+      <div class="border-t border-slate-100">
+        ${tracksHtml}
+      </div>
       ${kpiHtml}
     </div>`
 }
