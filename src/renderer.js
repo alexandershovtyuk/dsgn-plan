@@ -207,6 +207,7 @@ function slugify(str) {
 
 const BOARD_GRID    = 'display:grid;grid-template-columns:1fr 64px 64px 64px 64px 24px 64px 64px 64px 64px;align-items:center;column-gap:4px;'
 const EXP_BODY_GRID = 'display:grid;grid-template-columns:40% repeat(4,1fr);align-items:stretch;'
+const GANTT_GRID    = 'display:grid;grid-template-columns:2fr repeat(4,1fr);align-items:center;column-gap:8px;'
 
 function quarterRange(quarter) {
   if (!quarter) return null
@@ -268,12 +269,26 @@ function buildTeamHeaderRow(team, color, { expanded = false } = {}) {
   const currentQ = Math.floor(NOW_MONTH / 3)
   const lch = hexToOklch(color)
 
-  const qBlocks = expanded
-    ? [1,2,3,4].map(q => `
-        <div style="padding:5px 0;text-align:center;">
-          <div style="font-size:11px;font-weight:700;letter-spacing:0.05em;color:${ok(lch, 0.72, 0.40)}">Q${q}</div>
-        </div>`).join('')
-    : [0,1,2,3].map(qi => {
+  if (expanded) {
+    return `
+      <div style="${GANTT_GRID}padding:10px 16px;">
+        <div class="flex items-center gap-3 overflow-hidden">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0"
+               style="background:${ok(lch)}">
+            ${escapeHtml(team.team.slice(0,2).toUpperCase())}
+          </div>
+          <div class="min-w-0">
+            <div class="text-sm font-semibold text-slate-900 leading-tight truncate">${escapeHtml(team.team)}</div>
+            <div class="text-xs text-slate-400 truncate mt-0.5">${escapeHtml(team.owner || '')}</div>
+          </div>
+        </div>
+        ${[1,2,3,4].map(q => `
+          <div style="text-align:center;font-size:11px;font-weight:700;letter-spacing:0.05em;color:${ok(lch, 0.72, 0.40)}">Q${q}</div>
+        `).join('')}
+      </div>`
+  }
+
+  const qBlocks = [0,1,2,3].map(qi => {
     const qStart = qi * 3, qEnd = qi * 3 + 2
     const count = (team.tracks || [])
       .flatMap(t => t.objectives || [])
@@ -346,21 +361,31 @@ function renderTeamIsland(team, { expanded = false } = {}) {
       const oRange = quarterRange(obj.quarter)
       const objId = slugify(obj.title)
       const isFuture = oRange ? oRange.start > currentQ : false
-      const qPillBg    = isFuture ? ok(lch, 0.985, 0.12) : ok(lch, 0.970, 0.22)
-      const qPillColor = isFuture ? ok(lch, 0.68, 0.55) : ok(lch, 0.45)
-      const qPill = obj.quarter
-        ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0"
-                style="background:${qPillBg};color:${qPillColor}">${escapeHtml(obj.quarter)}</span>`
-        : ''
+      const cols = quarterToColumns(obj.quarter)
+      const pillBg    = isFuture ? ok(lch, 0.970, 0.22) : ok(lch, 0.58, 0.85)
+      const pillColor = isFuture ? ok(lch, 0.45) : 'white'
+
+      const qCells = [0,1,2,3].map(qi => {
+        if (!cols) return '<div></div>'
+        const s = qi * 3, e = qi * 3 + 2
+        const months = []
+        for (let i = Math.max(cols.start, s); i <= Math.min(cols.end, e); i++) {
+          months.push(MONTHS_ABBR[i])
+        }
+        return months.length
+          ? `<div class="flex flex-wrap gap-0.5 justify-center">${months.map(m =>
+              `<span style="background:${pillBg};color:${pillColor};padding:1px 5px;border-radius:5px;font-size:10px;font-weight:600;white-space:nowrap">${m}</span>`
+            ).join('')}</div>`
+          : '<div></div>'
+      }).join('')
 
       return `
         <div class="objective-block" data-obj-id="${objId}">
-          <div class="bg-white rounded-lg flex items-center gap-3 px-3 py-2.5 cursor-pointer
-                      hover:bg-slate-50 transition-colors duration-100"
+          <div style="${GANTT_GRID}background:white;border-radius:8px;padding:7px 12px;cursor:pointer"
+               class="hover:bg-slate-50 transition-colors duration-100"
                data-action="toggle-obj" data-obj-id="${objId}">
-            <div class="text-sm font-medium text-slate-800 leading-snug flex-1">${escapeHtml(obj.title)}</div>
-            ${obj.quarter ? renderObjMiniGantt(obj.quarter, lch, isFuture) : ''}
-            ${qPill}
+            <div class="text-sm font-medium text-slate-800 leading-snug min-w-0">${escapeHtml(obj.title)}</div>
+            ${qCells}
           </div>
           <div class="obj-card hidden">${renderObjectiveCard(obj, color)}</div>
         </div>`
