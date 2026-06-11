@@ -309,7 +309,7 @@ function buildTeamHeaderRow(team, color) {
 function renderCollapsedTeamCard(team) {
   const color = team.display?.color || '#6366f1'
   return `
-    <div class="team-island mb-2 rounded-2xl overflow-hidden cursor-pointer transition-all duration-150 hover:bg-white hover:shadow-[0_2px_16px_rgba(0,0,0,0.07)]"
+    <div class="team-island mb-2 rounded-2xl overflow-hidden cursor-pointer bg-white transition-all duration-150 hover:shadow-[0_2px_16px_rgba(0,0,0,0.07)]"
          data-action="toggle-team" data-slug="${escapeHtml(team.slug)}">
       ${buildTeamHeaderRow(team, color)}
     </div>`
