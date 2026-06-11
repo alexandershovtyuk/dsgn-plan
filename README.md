@@ -1,38 +1,100 @@
 # dsgn-plan
 
-Static site that aggregates design team OKR/KPI plans into Gantt charts.
+Статический сайт для объединения OKR/KPI-планов дизайн-команд в единый документ с гант-чартами. Каждая команда ведёт YAML-файл в репозитории — при пуше GitHub Actions собирает сайт и деплоит на GitHub Pages.
 
-## Adding a team
+---
+
+## Быстрый старт
+
+### 1. Создай репозиторий на GitHub
+
+Создай **пустой** приватный репозиторий на [github.com/new](https://github.com/new) — без README, .gitignore и лицензии.
+
+### 2. Запушь код
 
 ```bash
-cp data/_template.yaml data/2026/teams/<team-name>.yaml
+# Переименуй ветку master → main
+git branch -m master main
+
+# Добавь remote (замени YOUR_USERNAME)
+git remote add origin https://github.com/YOUR_USERNAME/dsgn-plan.git
+
+git push -u origin main
 ```
 
-Fill in the YAML fields (see [Data schema](#data-schema)), commit, and the team will appear on the next build.
+### 3. Добавь секрет SITE_PASSWORD
 
-## Local dev
+**Settings → Secrets and variables → Actions → New repository secret**
+
+| Name | Value |
+|---|---|
+| `SITE_PASSWORD` | придуманный пароль |
+
+### 4. Включи GitHub Pages
+
+**Settings → Pages → Source: Deploy from a branch → `gh-pages` / `root`**
+
+> Ветка `gh-pages` появляется автоматически после первого деплоя.
+
+### 5. Первый деплой запустится сам
+
+После шага 2 Actions уже должен работать. Следи во вкладке **Actions** репозитория. Готовый сайт:
+
+```
+https://YOUR_USERNAME.github.io/dsgn-plan/
+```
+
+---
+
+## Локальная разработка
 
 ```bash
-cp .env.example .env   # set PASSWORD in .env
+cp .env.example .env   # впиши SITE_PASSWORD=<пароль>
 npm install
-npm run dev            # http://localhost:3000
+npm run dev            # → http://localhost:3000
 ```
 
-## Build
+В режиме `dev` сервер отслеживает изменения YAML и пересобирает автоматически.
 
 ```bash
-npm run build          # output → dist/index.html
+npm run build          # разовая сборка → dist/index.html
 ```
 
-## Deploy (GitHub Pages)
+---
 
-Push to `main`. GitHub Actions (`.github/workflows/deploy.yml`) runs `npm run build` and pushes `dist/` to the `gh-pages` branch automatically.
+## Добавить команду
 
-First-time setup: go to **Settings → Pages** in the repo and set the source to the `gh-pages` branch.
+```bash
+cp data/_template.yaml data/2026/teams/<название>.yaml
+```
 
-## GitLab migration
+Заполни файл, закоммить, запушь — сайт обновится сам.
 
-Replace `.github/workflows/deploy.yml` with a GitLab CI job:
+---
+
+## Структура YAML
+
+Полный шаблон с комментариями: `data/_template.yaml`
+
+| Поле | Описание |
+|---|---|
+| `team` | Название команды |
+| `owner` | Имя лида |
+| `display.color` | Hex-цвет полос на гант-чарте |
+| `tracks[].name` | Название трека |
+| `tracks[].goal` | Долгосрочная цель трека |
+| `tracks[].objectives[].title` | Название objective |
+| `tracks[].objectives[].quarter` | `Q1`–`Q4`, `"Q2-Q3"` или `null` |
+| `tracks[].objectives[].key_results[]` | KR: `title`, `description`, `target` |
+| `kpis[]` | Командные метрики: `name`, `description`, `target` |
+
+Год берётся автоматически из пути файла: `data/<год>/teams/<команда>.yaml`
+
+---
+
+## Миграция на GitLab
+
+Замени `.github/workflows/deploy.yml` на GitLab CI:
 
 ```yaml
 pages:
@@ -47,25 +109,4 @@ pages:
     - main
 ```
 
-GitLab Pages serves the `public/` artifact automatically.
-
-## Data schema
-
-Fields defined in `data/_template.yaml`:
-
-| Field | Description |
-|---|---|
-| `team` | Team name shown in header and filter |
-| `owner` | Team lead name |
-| `display.color` | Hex color for Gantt bars |
-| `tracks[].name` | Strategic track name |
-| `tracks[].goal` | Long-term goal for the track |
-| `tracks[].objectives[].title` | Objective name |
-| `tracks[].objectives[].description` | What and why |
-| `tracks[].objectives[].quarter` | `Q1`–`Q4`, `"Q2-Q3"`, or `null` (undated) |
-| `tracks[].objectives[].prerequisites` | What must be done first |
-| `tracks[].objectives[].dependencies` | Teams/roles this depends on |
-| `tracks[].objectives[].key_results[]` | Measurable results (`title`, `description`, `target`) |
-| `kpis[]` | Ongoing metrics tracked each quarter (`name`, `description`, `target`) |
-
-The year is derived automatically from the file path (`data/<year>/teams/<team>.yaml`).
+GitLab Pages раздаёт артефакт `public/` автоматически.
