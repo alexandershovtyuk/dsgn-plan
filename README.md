@@ -99,7 +99,7 @@ cp data/_template.yaml data/2026/teams/<название>.yaml
 | `tracks[].goal` | Долгосрочная цель трека |
 | `tracks[].objectives[].title` | Название objective |
 | `tracks[].objectives[].quarter` | `Q1`–`Q4`, `"Q2-Q3"` или `null` |
-| `tracks[].objectives[].key_results[]` | KR: `title`, `description`, `target` |
+| `tracks[].objectives[].key_results[]` | KR: `title` |
 | `kpis[]` | Командные метрики: `name`, `description`, `target` |
 
 Год берётся автоматически из пути файла: `data/<год>/teams/<команда>.yaml`

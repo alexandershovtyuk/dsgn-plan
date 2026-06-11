@@ -120,7 +120,6 @@ function renderObjectiveCard(obj, color) {
       <div class="w-1.5 h-1.5 rounded-full mt-1 shrink-0" style="background:${escapeHtml(color)}"></div>
       <div>
         <span class="font-medium text-slate-700">${escapeHtml(kr.title)}</span>
-        ${kr.target ? `<span class="ml-1.5 text-slate-400">→ ${escapeHtml(kr.target)}</span>` : ''}
         ${kr.description ? `<div class="text-slate-400 mt-0.5">${escapeHtml(kr.description)}</div>` : ''}
       </div>
     </div>`).join('')
@@ -128,11 +127,6 @@ function renderObjectiveCard(obj, color) {
   return `
     <div class="bg-white border border-slate-200 rounded-lg p-4 mt-1 mb-2 ml-8 shadow-sm">
       <div class="font-semibold text-slate-900 mb-2">${escapeHtml(obj.title)}</div>
-      ${obj.description ? `<div class="text-xs text-slate-500 mb-3 leading-relaxed">${escapeHtml(obj.description)}</div>` : ''}
-      <div class="text-xs text-slate-400 flex flex-wrap gap-x-5 gap-y-1 mb-2">
-        ${obj.prerequisites ? `<span><strong class="text-slate-600">Требует:</strong> ${escapeHtml(obj.prerequisites)}</span>` : ''}
-        ${obj.dependencies ? `<span><strong class="text-slate-600">Зависит от:</strong> ${escapeHtml(obj.dependencies)}</span>` : ''}
-      </div>
       ${krHtml ? `<div class="mt-3"><div class="text-xs font-semibold text-slate-700 mb-1">Key Results</div>${krHtml}</div>` : ''}
     </div>`
 }
@@ -147,7 +141,7 @@ function renderKPI(kpis, color) {
           <div class="flex-1 min-w-[200px] bg-white border border-slate-200 rounded-xl p-4">
             <div class="text-sm font-semibold text-slate-800 mb-1">${escapeHtml(kpi.name)}</div>
             <div class="text-xs text-slate-400 mb-3 leading-relaxed">${escapeHtml(kpi.description || '')}</div>
-            <div class="text-2xl font-bold" style="color:${escapeHtml(color)}">${escapeHtml(kpi.target)}</div>
+            ${kpi.target ? `<div class="text-2xl font-bold" style="color:${escapeHtml(color)}">${escapeHtml(kpi.target)}</div>` : ''}
           </div>`).join('')}
       </div>
     </div>`
@@ -172,7 +166,28 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`
 }
 
-const BOARD_GRID = 'display:grid;grid-template-columns:1fr 64px 64px 64px 64px 24px 64px 64px 64px 64px;align-items:center;column-gap:4px;'
+const BOARD_GRID    = 'display:grid;grid-template-columns:1fr 64px 64px 64px 64px 24px 64px 64px 64px 64px;align-items:center;column-gap:4px;'
+const EXP_BODY_GRID = 'display:grid;grid-template-columns:40% repeat(4,1fr);align-items:stretch;'
+
+function quarterRange(quarter) {
+  if (!quarter) return null
+  const map = { Q1: 0, Q2: 1, Q3: 2, Q4: 3 }
+  const parts = quarter.toString().split('-')
+  const s = map[parts[0].trim()]
+  if (s === undefined) return null
+  if (parts.length === 2) {
+    const e = map[parts[1].trim()]
+    if (e === undefined) return null
+    return { start: s, end: e }
+  }
+  return { start: s, end: s }
+}
+
+function trackQuarterRange(track) {
+  const ranges = (track.objectives || []).map(o => quarterRange(o.quarter)).filter(Boolean)
+  if (!ranges.length) return null
+  return { start: Math.min(...ranges.map(r => r.start)), end: Math.max(...ranges.map(r => r.end)) }
+}
 
 function renderTeamBoardHeader() {
   const metrics = [
@@ -209,8 +224,7 @@ function renderTeamBoardHeader() {
     </div>`
 }
 
-function renderCollapsedTeamCard(team) {
-  const color = team.display?.color || '#6366f1'
+function buildTeamHeaderRow(team, color) {
   const currentQ = Math.floor(NOW_MONTH / 3)
 
   const qBlocks = [0,1,2,3].map(qi => {
@@ -245,9 +259,7 @@ function renderCollapsedTeamCard(team) {
   const kpiCount   = team.kpis?.length || 0
 
   return `
-    <div class="team-island rounded-2xl cursor-pointer transition-colors duration-150 hover:bg-white"
-         data-slug="${escapeHtml(team.slug)}" data-action="toggle-team"
-         style="${BOARD_GRID}padding:10px 0;overflow:hidden;">
+    <div style="${BOARD_GRID}padding:10px 0;overflow:hidden;">
       <div class="flex items-center gap-3 px-4 overflow-hidden">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0"
              style="background:${escapeHtml(color)}">
@@ -267,65 +279,97 @@ function renderCollapsedTeamCard(team) {
     </div>`
 }
 
+function renderCollapsedTeamCard(team) {
+  const color = team.display?.color || '#6366f1'
+  return `
+    <div class="team-island rounded-2xl overflow-hidden cursor-pointer transition-colors duration-150 hover:bg-white"
+         data-action="toggle-team" data-slug="${escapeHtml(team.slug)}">
+      ${buildTeamHeaderRow(team, color)}
+    </div>`
+}
+
 function renderTeamIsland(team, { expanded = false, showKR = false } = {}) {
   if (!expanded) return renderCollapsedTeamCard(team)
 
   const color = team.display?.color || '#6366f1'
-  const summaryBar = renderTeamSummaryBar(team, color)
+  const currentQ = Math.floor(NOW_MONTH / 3)
 
-  const headerHtml = `
-    <div class="grid grid-cols-[300px_1fr] cursor-pointer" data-action="toggle-team" data-slug="${escapeHtml(team.slug)}">
-      <div class="flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-200 border-b-slate-100 rounded-tl-xl border-r-0">
-        <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0" style="background:${escapeHtml(color)}">
-          ${escapeHtml(team.team.slice(0,2).toUpperCase())}
-        </div>
-        <div class="min-w-0">
-          <div class="text-sm font-semibold text-slate-900 leading-tight truncate">${escapeHtml(team.team)}</div>
-          <div class="text-xs text-slate-400 truncate mt-0.5">${escapeHtml(team.owner || '')}</div>
-        </div>
-        <svg class="ml-auto shrink-0 w-4 h-4 text-slate-300 rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-      </div>
-      <div class="bg-white border border-slate-200 border-b-slate-100 rounded-tr-xl border-l-0 grid grid-cols-12 gap-1 px-2 items-center">
-        ${summaryBar}
-      </div>
+  // Sub-header: Q column labels + thin bars (uses EXP_BODY_GRID)
+  const qSubHeaderCells = [0,1,2,3].map(qi => {
+    const qStart = qi * 3, qEnd = qi * 3 + 2
+    const hasGoals = (team.tracks || []).flatMap(t => t.objectives || [])
+      .some(o => { const c = quarterToColumns(o.quarter); return c && c.start <= qEnd && c.end >= qStart })
+    if (!hasGoals) {
+      return `<div class="border-l border-slate-100 flex flex-col items-center justify-center gap-1.5 py-2 px-4">
+        <span class="text-[11px] font-bold tracking-wide" style="color:#d1d5db;">Q${qi+1}</span>
+        <div style="width:60%;height:4px;border-radius:2px;background:#e2e8f0;"></div>
+      </div>`
+    }
+    const isFuture = qi > currentQ
+    const labelColor = isFuture ? hexToRgba(color, 0.45) : color
+    const barColor   = isFuture ? hexToRgba(color, 0.25) : color
+    return `<div class="border-l border-slate-100 flex flex-col items-center justify-center gap-1.5 py-2 px-4">
+      <span class="text-[11px] font-bold tracking-wide" style="color:${labelColor};">Q${qi+1}</span>
+      <div style="width:60%;height:4px;border-radius:2px;background:${barColor};"></div>
     </div>`
+  }).join('')
 
-  const monthHeaderHtml = `
-    <div class="grid grid-cols-[300px_1fr] bg-white border-b border-slate-100">
+  const subHeaderHtml = `
+    <div style="${EXP_BODY_GRID}border-bottom:1px solid #f1f5f9;">
       <div></div>
-      <div class="grid grid-cols-12 px-2">
-        ${MONTHS.map((m, i) => `
-          <div class="text-[10px] text-center py-1 ${i === NOW_MONTH ? 'text-red-500 font-bold' : 'text-slate-400'}">
-            ${m}${i === NOW_MONTH ? '<br>▼' : ''}
-          </div>`).join('')}
-      </div>
+      ${qSubHeaderCells}
     </div>`
 
-  // Expanded state
   const tracksHtml = (team.tracks || []).map(track => {
-    const trackBar = renderTrackBar(track, color)
+    const tRange = trackQuarterRange(track)
+
+    const trackQCells = [0,1,2,3].map(qi => {
+      if (!tRange || qi < tRange.start || qi > tRange.end) {
+        return `<div class="border-l border-slate-100 px-3 py-3"></div>`
+      }
+      const isFuture = qi > currentQ
+      const bg = isFuture ? hexToRgba(color, 0.3) : color
+      const isStart = qi === tRange.start, isEnd = qi === tRange.end
+      const r = isStart && isEnd ? '4px' : isStart ? '4px 0 0 4px' : isEnd ? '0 4px 4px 0' : '0'
+      return `<div class="border-l border-slate-100 px-3 py-3 flex items-center">
+        <div style="height:8px;width:100%;background:${bg};border-radius:${r};"></div>
+      </div>`
+    }).join('')
+
     const objectivesHtml = (track.objectives || []).map(obj => {
-      const bar = renderGanttBar(obj.quarter, color)
+      const oRange = quarterRange(obj.quarter)
       const objId = slugify(obj.title)
+
+      const objQCells = [0,1,2,3].map(qi => {
+        if (!oRange || qi < oRange.start || qi > oRange.end) {
+          return `<div class="border-l border-slate-100 px-3 py-2"></div>`
+        }
+        const isFuture = qi > currentQ
+        const bg = isFuture ? hexToRgba(color, 0.25) : hexToRgba(color, 0.45)
+        const isStart = qi === oRange.start, isEnd = qi === oRange.end
+        const r = isStart && isEnd ? '3px' : isStart ? '3px 0 0 3px' : isEnd ? '0 3px 3px 0' : '0'
+        return `<div class="border-l border-slate-100 px-3 py-2 flex items-center">
+          <div style="height:6px;width:100%;background:${bg};border-radius:${r};"></div>
+        </div>`
+      }).join('')
+
       const krRows = showKR ? (obj.key_results || []).map(kr => `
-        <div class="grid grid-cols-[300px_1fr] items-center min-h-[28px]">
-          <div class="flex items-center gap-2 pl-12 pr-4 py-1">
+        <div style="${EXP_BODY_GRID}min-height:28px;" class="border-t border-slate-100 items-center">
+          <div class="flex items-center gap-2 pl-10 pr-4 py-1">
             <div class="w-1 h-1 rounded-full shrink-0" style="background:${escapeHtml(color)}"></div>
             <div class="text-xs text-slate-400 leading-tight">${escapeHtml(kr.title)}</div>
           </div>
-          <div class="grid grid-cols-12 gap-1 px-2"></div>
+          ${[0,1,2,3].map(() => `<div class="border-l border-slate-100"></div>`).join('')}
         </div>`).join('') : ''
 
       return `
-        <div class="objective-block" data-obj-id="${objId}">
-          <div class="grid grid-cols-[300px_1fr] items-center min-h-[44px] hover:bg-slate-50 cursor-pointer border-t border-slate-100" data-action="toggle-obj" data-obj-id="${objId}">
-            <div class="pl-8 pr-4 py-2.5">
+        <div class="objective-block border-t border-slate-100" data-obj-id="${objId}">
+          <div style="${EXP_BODY_GRID}min-height:40px;cursor:pointer;"
+               class="hover:bg-slate-50 items-center" data-action="toggle-obj" data-obj-id="${objId}">
+            <div class="pl-8 pr-4 py-2">
               <div class="text-xs font-medium text-slate-800 leading-snug">${escapeHtml(obj.title)}</div>
-              ${obj.description ? `<div class="text-[10px] text-slate-400 mt-0.5 line-clamp-1 leading-snug">${escapeHtml(obj.description)}</div>` : ''}
             </div>
-            <div class="grid grid-cols-12 gap-1 px-2 items-center">
-              ${bar}
-            </div>
+            ${objQCells}
           </div>
           <div class="obj-card hidden">${renderObjectiveCard(obj, color)}</div>
           ${krRows}
@@ -333,31 +377,29 @@ function renderTeamIsland(team, { expanded = false, showKR = false } = {}) {
     }).join('')
 
     return `
-      <div class="track-block">
-        <div class="grid grid-cols-[300px_1fr] items-start bg-slate-50 border-t border-slate-200">
+      <div class="track-block border-t border-slate-200">
+        <div style="${EXP_BODY_GRID}" class="bg-slate-50 items-center">
           <div class="px-4 py-3">
-            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Трек · ${escapeHtml(track.name)}</span>
-            <span class="text-xs text-slate-500 italic leading-snug">${escapeHtml(track.goal || '')}</span>
+            <div class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Трек · ${escapeHtml(track.name)}</div>
+            <div class="text-xs text-slate-500 italic leading-snug">${escapeHtml(track.goal || '')}</div>
           </div>
-          <div class="grid grid-cols-12 gap-1 px-2 items-center py-3">
-            ${trackBar}
-          </div>
+          ${trackQCells}
         </div>
-        <div>
-          ${objectivesHtml}
-        </div>
+        ${objectivesHtml}
       </div>`
   }).join('')
 
   const kpiHtml = renderKPI(team.kpis, color)
 
   return `
-    <div class="team-island mb-6" data-slug="${escapeHtml(team.slug)}">
-      ${headerHtml}
-      <div class="border border-slate-200 border-t-0 rounded-b-xl overflow-hidden">
-        ${monthHeaderHtml}
-        ${tracksHtml}
-        ${kpiHtml}
+    <div class="team-island mb-2 bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.07)] overflow-hidden"
+         data-slug="${escapeHtml(team.slug)}">
+      <div class="cursor-pointer hover:bg-slate-50 transition-colors duration-150"
+           data-action="toggle-team" data-slug="${escapeHtml(team.slug)}">
+        ${buildTeamHeaderRow(team, color)}
       </div>
+      ${subHeaderHtml}
+      ${tracksHtml}
+      ${kpiHtml}
     </div>`
 }
