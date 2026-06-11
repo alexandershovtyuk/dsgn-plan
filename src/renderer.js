@@ -173,7 +173,7 @@ function renderKPI(kpis, color) {
           <div class="flex-1 min-w-[200px] bg-white border border-slate-200 rounded-xl p-4">
             <div class="text-sm font-semibold text-slate-800 mb-1">${escapeHtml(kpi.name)}</div>
             <div class="text-xs text-slate-400 mb-3 leading-relaxed">${escapeHtml(kpi.description || '')}</div>
-            ${kpi.target ? `<div class="text-2xl font-bold" style="color:${ok(lch)}">${escapeHtml(kpi.target)}</div>` : ''}
+            ${kpi.target ? `<div class="text-2xl font-bold" style="color:${ok(lch, 0.45)}">${escapeHtml(kpi.target)}</div>` : ''}
           </div>`).join('')}
       </div>
     </div>`
@@ -268,8 +268,8 @@ function buildTeamHeaderRow(team, color) {
         <div class="text-[9px]" style="color:#d1d5db;">целей</div>
       </div>`
     }
-    const textColor = isFuture ? ok(lch, lch.L + 0.20, 0.55) : ok(lch)
-    const subColor  = isFuture ? ok(lch, lch.L + 0.28, 0.40) : ok(lch, lch.L + 0.06, 0.75)
+    const textColor = isFuture ? ok(lch, 0.68, 0.55) : ok(lch, 0.45)
+    const subColor  = isFuture ? ok(lch, 0.72, 0.40) : ok(lch, 0.55, 0.75)
     const bg        = isFuture ? ok(lch, 0.985, 0.10)        : ok(lch, 0.970, 0.22)
     const border    = `1px solid ${isFuture ? ok(lch, 0.930, 0.28) : ok(lch, 0.875, 0.45)}`
     const word      = plural(count, 'цель', 'цели', 'целей')
@@ -328,7 +328,7 @@ function renderTeamIsland(team, { expanded = false } = {}) {
       const objId = slugify(obj.title)
       const isFuture = oRange ? oRange.start > currentQ : false
       const qPillBg    = isFuture ? ok(lch, 0.985, 0.12) : ok(lch, 0.970, 0.22)
-      const qPillColor = isFuture ? ok(lch, lch.L + 0.20, 0.55) : ok(lch)
+      const qPillColor = isFuture ? ok(lch, 0.68, 0.55) : ok(lch, 0.45)
       const qPill = obj.quarter
         ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0"
                 style="background:${qPillBg};color:${qPillColor}">${escapeHtml(obj.quarter)}</span>`
@@ -350,9 +350,9 @@ function renderTeamIsland(team, { expanded = false } = {}) {
       <div class="track-block px-3 pb-3 first:pt-3">
         <div class="rounded-xl p-3" style="background:${ok(lch, 0.955, 0.15)}">
           <div class="text-[9px] font-semibold uppercase tracking-widest mb-1 px-1"
-               style="color:${ok(lch, lch.L + 0.20, 0.55)}">${escapeHtml(track.name)}</div>
+               style="color:${ok(lch, 0.62, 0.55)}">${escapeHtml(track.name)}</div>
           <div class="text-sm font-semibold leading-snug mb-2.5 px-1"
-               style="color:${ok(lch)}">${escapeHtml(track.goal || '')}</div>
+               style="color:${ok(lch, 0.42)}">${escapeHtml(track.goal || '')}</div>
           <div class="flex flex-col gap-1">
             ${objectivesHtml}
           </div>
