@@ -145,6 +145,19 @@ function renderTrackBar(track, color) {
   }).join('')
 }
 
+function renderObjMiniGantt(quarter, lch, isFuture) {
+  const cols = quarterToColumns(quarter)
+  if (!cols) return ''
+  const activeColor = isFuture ? ok(lch, 0.78, 0.50) : ok(lch, 0.58, 0.85)
+  return `
+    <div class="flex gap-px shrink-0" style="width:84px">
+      ${Array.from({ length: 12 }, (_, i) => {
+        const active = i >= cols.start && i <= cols.end
+        return `<div style="flex:1;height:6px;border-radius:2px;background:${active ? activeColor : 'rgba(0,0,0,0.06)'}"></div>`
+      }).join('')}
+    </div>`
+}
+
 function renderObjectiveCard(obj, color) {
   const lch = hexToOklch(color)
   const krHtml = (obj.key_results || []).map(kr => `
@@ -340,6 +353,7 @@ function renderTeamIsland(team, { expanded = false } = {}) {
                       hover:bg-slate-50 transition-colors duration-100"
                data-action="toggle-obj" data-obj-id="${objId}">
             <div class="text-sm font-medium text-slate-800 leading-snug flex-1">${escapeHtml(obj.title)}</div>
+            ${obj.quarter ? renderObjMiniGantt(obj.quarter, lch, isFuture) : ''}
             ${qPill}
           </div>
           <div class="obj-card hidden">${renderObjectiveCard(obj, color)}</div>
